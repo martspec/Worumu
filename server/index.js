@@ -10,13 +10,15 @@ const io = socketIO(server, {
   cors: { 
     origin: '*',
     methods: ['GET', 'POST']
-  }
+  },
+  transports: ['websocket', 'polling']
 });
 
 app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
+const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // Game state
 const gameState = {
@@ -46,6 +48,14 @@ io.on('connection', (socket) => {
     WORLD_SIZE: 10000
   });
   
+  // Send all existing players to new player
+  const otherPlayers = Array.from(gameState.players.values())
+    .filter(p => p.id !== socket.id);
+  socket.emit('players:list', otherPlayers);
+  
+  // Notify others about new player
+  socket.broadcast.emit('player:joined', player);
+  
   // Player movement
   socket.on('player:move', (data) => {
     const p = gameState.players.get(socket.id);
@@ -70,7 +80,12 @@ io.on('connection', (socket) => {
 
 // REST API
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', players: gameState.players.size });
+  res.json({ 
+    status: 'ok', 
+    players: gameState.players.size,
+    environment: NODE_ENV,
+    timestamp: new Date()
+  });
 });
 
 app.get('/players', (req, res) => {
@@ -78,9 +93,20 @@ app.get('/players', (req, res) => {
   res.json({ count: players.length, players });
 });
 
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'WORUMU Backend Server',
+    status: 'running',
+    frontend: 'https://martspec.github.io/Worumu'
+  });
+});
+
 // Start
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🚀 WORUMU Backend running on port ${PORT}`);
   console.log(`📡 WebSocket ready for connections`);
-  console.log(`🎮 https://worumu-backend.railway.app (after deployment)\n`);
+  console.log(`🎮 Frontend: https://martspec.github.io/Worumu`);
+  console.log(`📊 Environment: ${NODE_ENV}\n`);
 });
+
+module.exports = { app, server, io, gameState };
