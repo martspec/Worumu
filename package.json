@@ -4,8 +4,7 @@
   "description": "WORUMU - 3D Open World Game",
   "main": "server/index.js",
   "scripts": {
-    "start": "cd server && npm install && npm start",
-    "dev": "cd server && npm start"
+    "start": "cd server && npm start"
   },
   "keywords": ["3d", "game", "multiplayer"],
   "author": "martspec",
