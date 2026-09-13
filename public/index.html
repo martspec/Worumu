@@ -4,44 +4,389 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>WORUMU - 3D Open World Game</title>
-    <link rel="stylesheet" href="../client/css/style.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; }
+        body { font-family: Arial, sans-serif; background: #1a1a2e; color: #eaeaea; }
         #game-container { width: 100vw; height: 100vh; }
-        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 24px; z-index: 1000; }
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00ff88; font-size: 24px; z-index: 1000; text-align: center; }
+        .loader { border: 4px solid #0f3460; border-top: 4px solid #00ff88; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto 0; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
+        .panel { pointer-events: auto; background: rgba(26, 26, 46, 0.9); border: 2px solid #0f3460; border-radius: 8px; padding: 15px; backdrop-filter: blur(10px); }
+        #stats { position: absolute; top: 20px; right: 20px; min-width: 200px; font-size: 14px; line-height: 1.8; }
+        #minimap { position: absolute; bottom: 20px; right: 20px; width: 150px; height: 150px; background: #16213e; border: 2px solid #0f3460; border-radius: 8px; pointer-events: auto; display: flex; align-items: center; justify-content: center; }
+        #inventory { position: absolute; bottom: 120px; left: 20px; max-width: 300px; max-height: 200px; overflow-y: auto; }
+        #hotbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto; }
+        .hotbar-slot { width: 60px; height: 60px; background: rgba(15, 52, 96, 0.7); border: 2px solid #0f3460; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 24px; }
+        .hotbar-slot:hover { background: rgba(15, 52, 96, 1); box-shadow: 0 0 10px #0f3460; }
+        .hotbar-slot.active { border-color: #00ff88; box-shadow: 0 0 15px #00ff88; }
+        
+        #mobile-controls { position: absolute; bottom: 0; left: 0; width: 100%; height: auto; display: none; justify-content: space-between; align-items: flex-end; padding: 20px; pointer-events: auto; z-index: 200; }
+        #mobile-controls.show { display: flex; }
+        #joystick { width: 120px; height: 120px; background: rgba(15, 52, 96, 0.5); border: 3px solid #0f3460; border-radius: 50%; position: relative; touch-action: none; }
+        #joystick::after { content: ''; position: absolute; width: 60px; height: 60px; background: #0f3460; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); cursor: grab; }
+        .button-grid { display: grid; grid-template-columns: repeat(2, 80px); gap: 10px; }
+        .action-btn { width: 80px; height: 80px; background: rgba(15, 52, 96, 0.8); color: #eaeaea; border: 2px solid #0f3460; border-radius: 8px; font-size: 11px; cursor: pointer; font-weight: bold; transition: all 0.2s; touch-action: none; }
+        .action-btn:active { background: #0f3460; box-shadow: 0 0 15px #0f3460; transform: scale(0.95); }
+        
+        .menu { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a2e; border: 3px solid #0f3460; border-radius: 12px; padding: 30px; max-width: 600px; max-height: 80vh; overflow-y: auto; z-index: 500; pointer-events: auto; display: none; flex-direction: column; }
+        .menu.show { display: flex; }
+        .menu h2 { color: #00ff88; margin-bottom: 20px; text-align: center; }
+        .recipe-item, .building-option { background: rgba(15, 52, 96, 0.5); border: 1px solid #0f3460; padding: 15px; margin-bottom: 10px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .recipe-item:hover, .building-option:hover { background: rgba(15, 52, 96, 0.8); box-shadow: 0 0 10px #0f3460; }
+        
+        @media (max-width: 768px) {
+            #stats { font-size: 12px; min-width: 140px; top: 10px; right: 10px; }
+            #minimap { width: 120px; height: 120px; bottom: 150px; right: 10px; }
+            #mobile-controls.show { display: flex; }
+            .button-grid { grid-template-columns: repeat(2, 60px); }
+            .action-btn { width: 60px; height: 60px; font-size: 9px; }
+        }
     </style>
 </head>
 <body>
     <div id="game-container"></div>
-    <div id="loading">Načítání hry...</div>
+    <div id="loading">🎮 Načítání WORUMU...<div class="loader"></div></div>
     
     <!-- HUD Elements -->
     <div id="hud">
-        <div id="inventory" class="panel"></div>
-        <div id="minimap"></div>
-        <div id="stats" class="panel"></div>
+        <div id="inventory" class="panel"><strong>📦 Inventář</strong></div>
+        <div id="minimap">🗺️</div>
+        <div id="stats" class="panel"><strong>⚙️ Stats</strong></div>
         <div id="hotbar" class="hotbar"></div>
     </div>
 
     <!-- Mobile Controls -->
-    <div id="mobile-controls" class="hidden">
+    <div id="mobile-controls">
         <div id="joystick" class="joystick"></div>
         <div class="button-grid">
-            <button id="btn-harvest" class="action-btn">Sběr</button>
-            <button id="btn-craft" class="action-btn">Craft</button>
-            <button id="btn-build" class="action-btn">Stavba</button>
-            <button id="btn-trade" class="action-btn">Obchod</button>
+            <button id="btn-harvest" class="action-btn">📦\nSbírání</button>
+            <button id="btn-craft" class="action-btn">🔨\nCraft</button>
+            <button id="btn-build" class="action-btn">🏠\nStavba</button>
+            <button id="btn-trade" class="action-btn">💰\nObchod</button>
         </div>
     </div>
 
     <!-- Menus -->
-    <div id="crafting-menu" class="menu hidden"></div>
-    <div id="building-menu" class="menu hidden"></div>
-    <div id="inventory-menu" class="menu hidden"></div>
+    <div id="crafting-menu" class="menu">
+        <h2>🔨 Crafting</h2>
+        <div id="craft-items"></div>
+    </div>
+    <div id="building-menu" class="menu">
+        <h2>🏠 Stavba</h2>
+        <div id="build-items"></div>
+    </div>
+    <div id="inventory-menu" class="menu">
+        <h2>📦 Inventář</h2>
+        <div id="inv-items"></div>
+    </div>
 
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r150/three.min.js"></script>
-    <script src="../dist/main.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simplex-noise@3.0.0/dist/simplex-noise.min.js"></script>
+    
+    <!-- Game Script -->
+    <script>
+        // ===== CONFIGURATION =====
+        const CONFIG = {
+            BACKEND_URL: 'https://worumu-backend.railway.app', // Budeme měnit po deploymuntu
+            WORLD_SIZE: 10000,
+            CHUNK_SIZE: 100,
+            MAX_HEIGHT: 50,
+            TICK_RATE: 60
+        };
+
+        // ===== WORLD GENERATOR =====
+        class WorldGenerator {
+            constructor() {
+                this.simplex = new SimplexNoise();
+                this.scale = 0.05;
+            }
+
+            getHeight(x, z) {
+                return this.simplex.noise2D(x * this.scale, z * this.scale) * CONFIG.MAX_HEIGHT;
+            }
+
+            generateTerrain(chunkX, chunkZ, chunkSize) {
+                const geometry = new THREE.PlaneGeometry(chunkSize, chunkSize, 16, 16);
+                const positions = geometry.attributes.position.array;
+                const baseX = chunkX * chunkSize;
+                const baseZ = chunkZ * chunkSize;
+
+                for (let i = 0; i < positions.length; i += 3) {
+                    const x = positions[i] + baseX;
+                    const z = positions[i + 2] + baseZ;
+                    positions[i + 1] = this.getHeight(x, z);
+                }
+
+                geometry.attributes.position.needsUpdate = true;
+                geometry.computeVertexNormals();
+
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0x228B22,
+                    roughness: 0.8,
+                    metalness: 0.1
+                });
+
+                const terrain = new THREE.Mesh(geometry, material);
+                terrain.castShadow = true;
+                terrain.receiveShadow = true;
+                terrain.rotation.x = -Math.PI / 2;
+                terrain.position.set(baseX, 0, baseZ);
+
+                return terrain;
+            }
+        }
+
+        // ===== PLAYER =====
+        class Player {
+            constructor(scene, camera) {
+                this.scene = scene;
+                this.camera = camera;
+                this.position = new THREE.Vector3(0, 50, 0);
+                this.velocity = new THREE.Vector3(0, 0, 0);
+                this.speed = 0.15;
+                this.sprintSpeed = 0.25;
+                this.gravity = 0.3;
+                this.health = 100;
+                this.stamina = 100;
+                this.hunger = 100;
+                this.inventory = [];
+                this.rotation = { x: 0, y: 0 };
+                this.isGrounded = false;
+
+                // Create player model
+                const geometry = new THREE.CapsuleGeometry(0.5, 2, 4, 8);
+                const material = new THREE.MeshStandardMaterial({ color: 0x2196F3 });
+                this.mesh = new THREE.Mesh(geometry, material);
+                this.mesh.castShadow = true;
+                this.mesh.receiveShadow = true;
+                this.mesh.position.copy(this.position);
+                this.scene.add(this.mesh);
+
+                // Input
+                this.keys = {};
+                this.setupInput();
+            }
+
+            setupInput() {
+                document.addEventListener('keydown', (e) => {
+                    this.keys[e.key.toLowerCase()] = true;
+                });
+                document.addEventListener('keyup', (e) => {
+                    this.keys[e.key.toLowerCase()] = false;
+                });
+                document.addEventListener('mousemove', (e) => {
+                    this.rotation.y -= e.movementX * 0.005;
+                    this.rotation.x -= e.movementY * 0.005;
+                    this.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.rotation.x));
+                });
+                document.addEventListener('click', () => {
+                    if (!document.pointerLockElement) {
+                        document.documentElement.requestPointerLock();
+                    }
+                });
+            }
+
+            update(deltaTime) {
+                const direction = new THREE.Vector3();
+                if (this.keys['w']) direction.z -= 1;
+                if (this.keys['s']) direction.z += 1;
+                if (this.keys['a']) direction.x -= 1;
+                if (this.keys['d']) direction.x += 1;
+
+                if (direction.length() > 0) {
+                    direction.normalize();
+                    const speed = this.keys['shift'] ? this.sprintSpeed : this.speed;
+                    const cos = Math.cos(this.rotation.y);
+                    const sin = Math.sin(this.rotation.y);
+                    this.velocity.x = (direction.x * cos - direction.z * sin) * speed;
+                    this.velocity.z = (direction.x * sin + direction.z * cos) * speed;
+                    this.stamina = Math.max(0, this.stamina - deltaTime * (this.keys['shift'] ? 50 : -30));
+                } else {
+                    this.velocity.x *= 0.9;
+                    this.velocity.z *= 0.9;
+                }
+
+                this.velocity.y -= this.gravity;
+                this.isGrounded = this.position.y <= 0;
+                if (this.isGrounded) {
+                    this.velocity.y = 0;
+                    this.position.y = 0;
+                    if (this.keys[' ']) {
+                        this.velocity.y = 15;
+                    }
+                }
+
+                this.position.add(this.velocity);
+                this.mesh.position.copy(this.position);
+                this.mesh.rotation.order = 'YXZ';
+                this.mesh.rotation.set(this.rotation.x, this.rotation.y, 0);
+            }
+        }
+
+        // ===== MAIN GAME =====
+        class Game {
+            constructor() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x87CEEB);
+                this.scene.fog = new THREE.Fog(0x87CEEB, 500, 2000);
+
+                this.camera = new THREE.PerspectiveCamera(
+                    75,
+                    window.innerWidth / window.innerHeight,
+                    0.1,
+                    2000
+                );
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFShadowShadowMap;
+                document.getElementById('game-container').appendChild(this.renderer.domElement);
+
+                // Setup lighting
+                this.setupLighting();
+
+                // Initialize systems
+                this.worldGen = new WorldGenerator();
+                this.player = new Player(this.scene, this.camera);
+                this.chunks = new Map();
+                this.clock = new THREE.Clock();
+
+                // Check if mobile
+                this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                if (this.isMobile) {
+                    document.getElementById('mobile-controls').classList.add('show');
+                }
+
+                // Connect to backend
+                this.connectBackend();
+
+                // Start game
+                window.addEventListener('resize', () => this.onWindowResize());
+                this.start();
+            }
+
+            setupLighting() {
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                this.scene.add(ambientLight);
+
+                const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                sunLight.position.set(100, 150, 50);
+                sunLight.castShadow = true;
+                sunLight.shadow.camera.left = -200;
+                sunLight.shadow.camera.right = 200;
+                sunLight.shadow.camera.top = 200;
+                sunLight.shadow.camera.bottom = -200;
+                sunLight.shadow.mapSize.width = 2048;
+                sunLight.shadow.mapSize.height = 2048;
+                this.scene.add(sunLight);
+            }
+
+            connectBackend() {
+                try {
+                    this.socket = io(CONFIG.BACKEND_URL, { reconnection: true });
+                    this.socket.on('connect', () => {
+                        console.log('✅ Connected to backend');
+                    });
+                    this.socket.on('disconnect', () => {
+                        console.log('❌ Disconnected from backend');
+                    });
+                } catch (e) {
+                    console.log('⚠️ Backend unavailable, running single-player');
+                }
+            }
+
+            start() {
+                // Generate initial chunks
+                for (let x = -2; x <= 2; x++) {
+                    for (let z = -2; z <= 2; z++) {
+                        this.generateChunk(x, z);
+                    }
+                }
+
+                // Hide loading screen
+                document.getElementById('loading').style.display = 'none';
+
+                // Update UI
+                this.updateUI();
+
+                // Start animation loop
+                this.animate();
+            }
+
+            generateChunk(chunkX, chunkZ) {
+                const key = `${chunkX},${chunkZ}`;
+                if (this.chunks.has(key)) return;
+
+                const terrain = this.worldGen.generateTerrain(chunkX, chunkZ, CONFIG.CHUNK_SIZE);
+                this.scene.add(terrain);
+                this.chunks.set(key, terrain);
+            }
+
+            updateUI() {
+                // Stats
+                document.getElementById('stats').innerHTML = `
+                    <div style="color: #ff4444;">❤️ Health: ${Math.round(this.player.health)}/100</div>
+                    <div style="color: #ffff44;">⚡ Stamina: ${Math.round(this.player.stamina)}/100</div>
+                    <div style="color: #ff8844;">🍖 Hunger: ${Math.round(this.player.hunger)}/100</div>
+                    <div style="color: #4488ff;">📍 X: ${Math.round(this.player.position.x)} Z: ${Math.round(this.player.position.z)}</div>
+                `;
+
+                // Inventory
+                const invHTML = this.player.inventory.length > 0
+                    ? this.player.inventory.map(item => `<div style="padding: 5px; background: rgba(15,52,96,0.5); margin: 5px 0; border-radius: 4px;">${item.name} x${item.count}</div>`).join('')
+                    : '<div style="color: #888;">Prázdné...</div>';
+                document.getElementById('inventory').innerHTML = `<strong>📦 Inventář (${this.player.inventory.length})</strong>${invHTML}`;
+
+                // Hotbar
+                document.getElementById('hotbar').innerHTML = Array(8).fill(0).map((_, i) => `<div class="hotbar-slot">📦</div>`).join('');
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+
+                const dt = this.clock.getDelta();
+                this.player.update(dt);
+
+                // Update chunks
+                const chunkX = Math.floor(this.player.position.x / CONFIG.CHUNK_SIZE);
+                const chunkZ = Math.floor(this.player.position.z / CONFIG.CHUNK_SIZE);
+                for (let x = chunkX - 2; x <= chunkX + 2; x++) {
+                    for (let z = chunkZ - 2; z <= chunkZ + 2; z++) {
+                        this.generateChunk(x, z);
+                    }
+                }
+
+                // Update camera
+                const offset = new THREE.Vector3(0, 15, -30);
+                offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.player.rotation.y);
+                offset.add(this.player.position);
+                this.camera.position.lerp(offset, 0.1);
+                this.camera.lookAt(this.player.position.clone().add(new THREE.Vector3(0, 10, 0)));
+
+                // Update UI
+                this.updateUI();
+
+                // Render
+                this.renderer.render(this.scene, this.camera);
+            }
+
+            onWindowResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        }
+
+        // ===== START GAME =====
+        window.addEventListener('DOMContentLoaded', () => {
+            window.game = new Game();
+            console.log('🎮 WORUMU Started!');
+        });
+    </script>
 </body>
 </html>
