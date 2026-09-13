@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>WORUMU - 3D Open World Game</title>
+    <link rel="stylesheet" href="../client/css/style.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; }
+        #game-container { width: 100vw; height: 100vh; }
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 24px; z-index: 1000; }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <div id="loading">Načítání hry...</div>
+    
+    <!-- HUD Elements -->
+    <div id="hud">
+        <div id="inventory" class="panel"></div>
+        <div id="minimap"></div>
+        <div id="stats" class="panel"></div>
+        <div id="hotbar" class="hotbar"></div>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div id="mobile-controls" class="hidden">
+        <div id="joystick" class="joystick"></div>
+        <div class="button-grid">
+            <button id="btn-harvest" class="action-btn">Sběr</button>
+            <button id="btn-craft" class="action-btn">Craft</button>
+            <button id="btn-build" class="action-btn">Stavba</button>
+            <button id="btn-trade" class="action-btn">Obchod</button>
+        </div>
+    </div>
+
+    <!-- Menus -->
+    <div id="crafting-menu" class="menu hidden"></div>
+    <div id="building-menu" class="menu hidden"></div>
+    <div id="inventory-menu" class="menu hidden"></div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r150/three.min.js"></script>
+    <script src="../dist/main.js"></script>
+</body>
+</html>
